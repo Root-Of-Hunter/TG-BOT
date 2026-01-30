@@ -1,4 +1,4 @@
-import telebot # lowercase 'i' হবে
+import telebot 
 from telebot import types
 import sys
 
