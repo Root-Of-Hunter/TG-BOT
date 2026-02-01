@@ -1,78 +1,130 @@
+import asyncio
+import logging
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.errors import FloodWait, UserNotParticipant, ChatAdminRequired
 
-# আপনার দেওয়া ডিটেইলস
-API_ID = 35383192
-API_HASH = "c895107fcf3589b9fa224638e7817a31"
-BOT_TOKEN = "7148954721:AAEhqU9v5bARNNPD11NI1zSy4kaCMjUbx6U"
+# ------------------ CONFIG ------------------
+# এখানে আপনার বটের টোকেন দিন
+BOT_TOKEN = "7148954721:AAEhqU9v5bARNNPD11NI1zSy4kaCMjUbx6U" 
 
-app = Client("root_of_hunter_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+# এগুলো ডিফল্ট, পরিবর্তন করার দরকার নেই
+API_ID = 26526978 
+API_HASH = "80983a5f973715c9071066551061972f"
 
-@app.on_message(filters.command("start"))
-async def start(client, message):
-    photo_url = "https://t.me/PRIMEBACKUPP/29" 
-    
-    text = (
-        f"✨ **PREMIUM AUTHENTICATION** ✨\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"👋 **স্বাগতম** {message.from_user.mention}\n\n"
-        f"বটটি ব্যবহার করতে নিচের ৪টি চ্যানেলে জয়েন থাকা বাধ্যতামূলক।\n"
-        f"জয়েন করার পর আপনার পছন্দের মোডটি সিলেক্ট করুন।\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━"
-    )
+# আপনার দেওয়া নতুন ফটো লিঙ্ক
+PHOTO_URL = "https://t.me/roh_x_vip/3" 
 
-    # ৪টি চ্যানেল এবং YES/NO বাটন গ্রিড
-    buttons = [
-        [
-            InlineKeyboardButton("📢 Channel 1", url="https://t.me/rootofhunter"),
-            InlineKeyboardButton("🚀 Channel 2", url="https://t.me/Rootofhunter_V1")
-        ],
-        [
-            InlineKeyboardButton("💎 Channel 3", url="https://t.me/+PG34lOvCkdc2YmQ1"),
-            InlineKeyboardButton("🔥 Channel 4", url="https://t.me/roh_hacking")
-        ],
-        [
-            InlineKeyboardButton("🌟 YES (JOIN VIP)", callback_data="run_yes"),
-            InlineKeyboardButton("🛡️ NO (CONTINUE)", callback_data="run_no")
-        ],
-        [
-            InlineKeyboardButton("👨‍💻 ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ", url="https://t.me/Xyz_Zico")
+# আপনার চ্যানেলগুলোর ইউজারনেম দিন (বটকে অবশ্যই এডমিন করতে হবে)
+CHANNELS = [
+    "@Link_1",          
+    "@Link_2",          
+    "@Link_3",          
+    "@Link_4",          
+]
+
+VIP_LINK = "https://t.me/your_vip_link"
+ADMIN_USERNAME = "your_admin_username"
+
+# ------------------ Logging ------------------
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+joined_users = {}
+
+app = Client(
+    name="root_hunter_bot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
+)
+
+# ------------------ FUNCTIONS ------------------
+
+async def is_user_joined_all(user_id: int) -> bool:
+    if user_id in joined_users:
+        return True
+    for channel in CHANNELS:
+        try:
+            member = await app.get_chat_member(channel, user_id)
+            if member.status in ["left", "kicked"]:
+                return False
+        except (UserNotParticipant, ChatAdminRequired):
+            return False
+        except Exception:
+            return False
+    joined_users[user_id] = True
+    return True
+
+# ------------------ START COMMAND ------------------
+
+@app.on_message(filters.private & filters.command("start"))
+async def start(client: Client, message):
+    user_id = message.from_user.id
+    user_mention = message.from_user.mention
+
+    if await is_user_joined_all(user_id):
+        text = (
+            f"✨ **WELCOME BACK** {user_mention} ✨\n\n"
+            f"🎉 আপনি সফলভাবে ভেরিফাইড আছেন।\n"
+            f"নিচের মেনু থেকে ফিচারগুলো ব্যবহার করুন।"
+        )
+        buttons = [
+            [InlineKeyboardButton("🚀 MAIN MENU", callback_data="main_menu")],
+            [InlineKeyboardButton("💎 VIP SECTION", callback_data="vip_section")],
+            [InlineKeyboardButton("👨‍💻 Admin", url=f"https://t.me/{ADMIN_USERNAME.lstrip('@')}")],
         ]
-    ]
+    else:
+        text = (
+            f"✨ **PREMIUM AUTHENTICATION** ✨\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👋 **হ্যালো** {user_mention}\n\n"
+            f"বটটি ব্যবহার করতে নিচের ৪টি চ্যানেলে জয়েন করুন।\n"
+            f"জয়েন শেষ হলে **YES** বাটনে ক্লিক করুন।\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━"
+        )
+        buttons = [
+            [
+                InlineKeyboardButton("📢 Ch 1", url=f"https://t.me/rootofhunter{CHANNELS[0].lstrip('@')}"),
+                InlineKeyboardButton("🚀 Ch 2", url=f"https://t.me/Rootofhunter_V1{CHANNELS[1].lstrip('@')}"),
+            ],
+            [
+                InlineKeyboardButton("💎 Ch 3", url=f"https://t.me/+H3wWMPUq4Zo0MWJl{CHANNELS[2].lstrip('@')}"),
+                InlineKeyboardButton("🔥 Ch 4", url=f"https://t.me/ROH_VIP_MOOD_APPS{CHANNELS[3].lstrip('@')}"),
+            ],
+            [InlineKeyboardButton("🌟 YES I'VE JOINED", callback_data="check_join")],
+            [InlineKeyboardButton("👨‍💻 Contact Admin", url=f"https://t.me/Xyz_Zico{ADMIN_USERNAME.lstrip('@')}")],
+        ]
 
-    await message.reply_photo(
-        photo=photo_url,
-        caption=text,
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    try:
+        await message.reply_photo(photo=PHOTO_URL, caption=text, reply_markup=InlineKeyboardMarkup(buttons))
+    except Exception as e:
+        logger.error(f"Photo error: {e}")
+        await message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(buttons))
+
+# ------------------ CALLBACK HANDLER ------------------
 
 @app.on_callback_query()
-async def callback_handler(client, callback_query):
-    data = callback_query.data
+async def cb_handler(client: Client, cq: CallbackQuery):
+    if cq.data == "check_join":
+        if await is_user_joined_all(cq.from_user.id):
+            await cq.answer("✅ Access Granted!", show_alert=True)
+            await cq.edit_message_caption(
+                "🎉 আপনি সফলভাবে ভেরিফাইড হয়েছেন!\nএখন বটের সব ফিচার উপভোগ করুন।", 
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 MAIN MENU", callback_data="main_menu")]])
+            )
+        else:
+            await cq.answer("❌ আপনি সব চ্যানেলে জয়েন করেননি!", show_alert=True)
     
-    if data == "run_yes":
-        await callback_query.answer("Processing VIP Request...", show_alert=False)
-        vip_text = (
-            "💎 **WELCOME TO VIP SECTION** 💎\n\n"
-            "আপনি VIP মেম্বারশিপের জন্য আবেদন করেছেন। নিচের বাটনে ক্লিক করে VIP চ্যানেলে প্রবেশ করুন।"
+    elif cq.data == "main_menu":
+        await cq.edit_message_caption(
+            "🏠 **MAIN MENU**\n\nআপনার প্রয়োজনীয় টুলসগুলো এখানে পাবেন।", 
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back_to_start")]])
         )
-        await callback_query.edit_message_caption(
-            caption=vip_text,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔗 JOIN VIP CONTACT", url="https://t.me/Xyz_Zico")],
-                [InlineKeyboardButton("🔙 BACK", callback_data="back_to_start")]
-            ])
-        )
+    
+    elif cq.data == "back_to_start":
+        await start(client, cq.message)
 
-    elif data == "run_no":
-        await callback_query.answer("Access Granted ✅", show_alert=False)
-        await callback_query.edit_message_caption(
-            caption="✅ **Access Granted!**\n\nআপনি সাধারণ ইউজার হিসেবে বটটি সফলভাবে চালু করেছেন। এখন আপনি কাজ শুরু করতে পারেন।",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 START USING", callback_data="main_menu")]])
-        )
-
-    elif data == "back_to_start":
-        await start(client, callback_query.message)
-
-print("Root Of Hunter Bot with 4 Channels is Live! 🔥")
-app.run()
+if __name__ == "__main__":
+    print("Bot is running...")
+    app.run()
